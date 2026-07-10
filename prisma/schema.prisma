@@ -7,6 +7,33 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+
 model User {
   id           Int      @id @default(autoincrement())
   email        String   @unique
@@ -16,20 +43,20 @@ model User {
   lastName     String?
   phone        String?
 
-  role         String   @default("customer")
+  role         UserRole @default(CUSTOMER)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  Address Address[]
-  cart     Cart?
-  orders   Order[]
+  addresses    Address[]
+  cart         Cart?
+  orders       Order[]
 }
 
 model Address {
   id Int @id @default(autoincrement())
   userId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   orders Order[]
 
@@ -44,11 +71,11 @@ model Address {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
-
-
-model Category{
+model Category {
   id Int @id @default(autoincrement())
   parentId Int?
   parent Category? @relation("CategoryChildren", fields: [parentId], references: [id])
@@ -62,7 +89,7 @@ model Category{
   coverImage String?
 }
 
-model Product{
+model Product {
   id Int @id @default(autoincrement())
   category Category @relation(fields: [categoryId], references: [id])
   categoryId Int
@@ -70,21 +97,23 @@ model Product{
   slug String @unique
   description String?
   brand String?
-  status String @default("ACTIVE")
+  status ProductStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   variants ProductVariant[]
   coverImage String?
+
+  @@index([categoryId])
 }
 
-model ProductVariant{
+model ProductVariant {
   id Int @id @default(autoincrement())
   productId Int
-  product Product @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   size String?
   color String?
-  price Decimal
+  price Decimal @db.Decimal(10, 2)
   sku String @unique
   stockQuantity Int @default(0)
   images String[]
@@ -94,12 +123,14 @@ model ProductVariant{
   
   cartItems CartItem[]
   orderItems OrderItem[]
+
+  @@index([productId])
 }
 
 model Cart {
   id Int @id @default(autoincrement())
   userId Int @unique
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,24 +138,27 @@ model Cart {
   cartItems CartItem[]
 }
 
-model CartItem{
+model CartItem {
   id Int @id @default(autoincrement())
   cartId Int
-  cart Cart @relation(fields: [cartId], references: [id])
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
   variantId Int
   variant ProductVariant @relation(fields: [variantId], references: [id])
   quantity Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([cartId, variantId])
+  @@index([variantId])
 }
 
 model Order {
   id Int @id @default(autoincrement())
   userId Int
   user User @relation(fields: [userId], references: [id])
-  totalAmount Decimal
-  status String @default("PENDING")
+  totalAmount Decimal @db.Decimal(10, 2)
+  status OrderStatus @default(PENDING)
   addressId Int
   address Address @relation(fields: [addressId], references: [id])
   createdAt DateTime @default(now())
@@ -132,29 +166,35 @@ model Order {
 
   orderItems OrderItem[]
   payment Payment?
+
+  @@index([userId])
+  @@index([addressId])
 }
 
 model OrderItem {
   id Int @id @default(autoincrement())
   orderId Int
-  order Order @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variantId Int
   variant ProductVariant @relation(fields: [variantId], references: [id])
   quantity Int
-  priceSnapshot Decimal
+  priceSnapshot Decimal @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([variantId])
 }
 
 model Payment {
   id Int @id @default(autoincrement())
   orderId Int @unique
-  order Order @relation(fields: [orderId], references: [id])
-  provider String // ex: stripe, paypal,razorpay
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider String // ex: stripe, paypal, razorpay
   transactionId String
-  amount Decimal
-  status String @default("PENDING")
+  amount Decimal @db.Decimal(10, 2)
+  status PaymentStatus @default(PENDING)
   providerOrderId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
