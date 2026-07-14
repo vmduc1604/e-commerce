@@ -39,8 +39,7 @@ model User {
   email        String   @unique
   passwordHash String
 
-  firstName    String?
-  lastName     String?
+  name         String?
   phone        String?
 
   role         UserRole @default(CUSTOMER)
@@ -199,3 +198,6 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+//command to migrate: npx prisma migrate dev
+//command to generate prisma client: npx prisma generate
