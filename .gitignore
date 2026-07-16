@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+#docs
+/docs/DATABASE.md
+/docs/Folder-structure.md
+/docs/roadmap.md
+/docs/learning-journal.md

@@ -1,162 +1,123 @@
-// ========================================
-// SIMP - E-Commerce Clothing Store
-// ========================================
+# Database Design
 
-Table users {
-id integer [pk, increment]
-email varchar [unique, not null]
-password_hash varchar [not null]
+Database: PostgreSQL
 
-first_name varchar
-last_name varchar
-phone varchar
+ORM: Prisma
 
-role varchar [default: 'customer']
+---
 
-created_at timestamp
-updated_at timestamp
-}
+## Main Entities
 
-Table addresses {
-id integer [pk, increment]
+User
 
-user_id integer [not null]
+Address
 
-receiver_name varchar
-phone varchar
+Category
 
-province varchar
-district varchar
-ward varchar
-street varchar
+Product
 
-is_default boolean [default: false]
+ProductVariant
 
-created_at timestamp
-}
+Cart
 
-Table categories {
-id integer [pk, increment]
-parent_id integer [null]
-name varchar [not null]
-slug varchar [unique]
-created_at timestamp
-}
+CartItem
 
-Table products {
-id integer [pk, increment]
+Order
 
-category_id integer [null]
+OrderItem
 
-name varchar [not null]
-slug varchar [unique]
+Payment
 
-description text
+---
 
-brand varchar
+## Relationships
 
-status varchar [default: 'active']
+User
 
-created_at timestamp
-updated_at timestamp
-}
+1 → Many Addresses
 
-Table product_variants {
-id integer [pk, increment]
+1 → 1 Cart
 
-product_id integer [not null]
+1 → Many Orders
 
-sku varchar [unique]
+---
 
-size varchar
-color varchar
+Category
 
-price decimal
+Recursive relationship
 
-stock_quantity integer [default: 0]
+Category
 
-image_url varchar
+↓
 
-created_at timestamp
-}
+Children Categories
 
-Table carts {
-id integer [pk, increment]
+---
 
-user_id integer [unique, not null]
+Product
 
-created_at timestamp
-}
+Many Products belong to one Category.
 
-Table cart_items {
-id integer [pk, increment]
+---
 
-cart_id integer [not null]
-product_variant_id integer [not null]
+ProductVariant
 
-quantity integer [default: 1]
-}
+One Product
 
-Table orders {
-id integer [pk, increment]
+↓
 
-user_id integer [not null]
-address_id integer [not null]
+Many Variants
 
-total_amount decimal
+Each variant has
 
-status varchar [default: 'PENDING']
+- SKU
+- Size
+- Color
+- Stock
+- Price
 
-created_at timestamp
-updated_at timestamp
-}
+---
 
-Table order_items {
-id integer [pk, increment]
+Cart
 
-order_id integer [not null]
-product_variant_id integer [not null]
+One Cart per User.
 
-quantity integer
+The cart is temporary.
 
-price_snapshot decimal
-}
+It is NOT linked directly to Orders.
 
-Table payments {
-id integer [pk, increment]
+During checkout,
 
-order_id integer [not null]
+Cart Items
 
-provider varchar
-amount decimal
+↓
 
-status varchar
+Order Items
 
-paid_at timestamp
+↓
 
-created_at timestamp
-}
+Cart is cleared.
 
-// ========================================
-// RELATIONSHIPS
-// ========================================
+---
 
-Ref: addresses.user_id > users.id
+Order
 
-Ref: products.category_id > categories.id
+Represents a historical snapshot.
 
-Ref: product_variants.product_id > products.id
+Changing a product later must never change previous orders.
 
-Ref: carts.user_id > users.id
+Therefore OrderItem stores
 
-Ref: cart_items.cart_id > carts.id
-Ref: cart_items.product_variant_id > product_variants.id
+priceSnapshot
 
-Ref: orders.user_id > users.id
-Ref: orders.address_id > addresses.id
+instead of referencing Product.price.
 
-Ref: order_items.order_id > orders.id
-Ref: order_items.product_variant_id > product_variants.id
+---
 
-Ref: payments.order_id > orders.id
-Ref: categories.parent_id > categories.id
+Payment
+
+One Order
+
+↓
+
+One Payment
